@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source orkhideya
+ork_include proc
+ork_include stdout
+ork_include stdlib
+ork_include qemu
+
+_label="$1"
+
+if [ -z "$_label" -o "$_label" == '-' ]; then
+   _label="qemu-system-x86-win7"
+fi
+
+_args="${@:2}"
+
+stdout_normal "Building commandline for $(stdout_color_wrap main-focused "Windows 7") machine."
+
+_args=""$_args" "$(qemu_arg_default "$_args" name win7)""
+_args=""$_args" "$(qemu_arg_default "$_args" m 2g)""
+_args=""$_args" "$(qemu_arg_default "$_args" hda "$(qemu_img_file "x86.windows.7.base")")""
+
+stdlib_trap qemu_vm_boot x86.windows "$_label" $_args
+exit 0

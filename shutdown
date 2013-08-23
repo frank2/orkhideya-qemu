@@ -1,0 +1,40 @@
+#!/bin/bash 
+
+source orkhideya
+ork_include stdout
+ork_include proc
+ork_include if
+
+_label="$1"
+
+if [ -z "$_label" ]; then
+   _label="qemu-machine"
+fi
+
+_tunnel_file="$(stdlib_tmpfile "$_label-tunnel")"
+if [ -r "$_tunnel_file" ]; then
+   stdout_warning "Destroying the tunnel the VM created."
+   _tunnel_interface="$(cat "$_tunnel_file")"
+   echo $_tunnel_interface
+
+   stdlib_trap if_class_destroy tunnel "$_tunnel_interface"
+fi
+
+shred -u "$_tunnel_file"
+_router_file="$(stdlib_tmpfile "$_label-router")"
+echo $_tunnel_file $(cat "$_tunnel_file")
+if [ -r "$_router_file" ]; then
+   stdout_warning "Destroying the router the VM created."
+   _router_interface="$(cat "$_router_file")"
+
+   stdlib_trap if_class_destroy router "$_router_interface"
+fi
+
+shred -u "$_router_file"
+
+stdout_warning "Terminating $(stdout_color_wrap main-focused "$_label")."
+stdlib_trap proc_label_kill "$_label"
+
+stdout_normal "qemu machine terminated."
+
+exit 0

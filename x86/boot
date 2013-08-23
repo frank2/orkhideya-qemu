@@ -1,0 +1,19 @@
+#!/bin/bash 
+
+source orkhideya-root
+ork_include stdlib
+ork_include stdout
+ork_include qemu
+
+_label="$1"
+
+if [ -z "$_label" -o "$_label" == '-' ]; then
+   _label="qemu-machine-x86"
+fi
+
+_args="${@:2}"
+
+stdout_normal "Building commandline for $(stdout_color_wrap main-focused "x86") qemu machine."
+stdlib_trap qemu_vm_boot '' i386 "$_label" $_args
+
+exit 0
