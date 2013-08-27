@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-source orkhideya-root
+source orkhideya
 ork_include stdlib
 ork_include stdout
 ork_include qemu
@@ -14,6 +14,8 @@ fi
 _args="${@:2}"
 
 stdout_normal "Building commandline for $(stdout_color_wrap main-focused "x86") qemu machine."
+_args=""$_args" "$(qemu_arg_default "$_args" "cpu" "kvm32")""
+
 stdlib_trap qemu_vm_boot '' i386 "$_label" $_args
 
 exit 0

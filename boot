@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-source orkhideya-root
+source orkhideya
 ork_include proc
 ork_include if
 ork_include mac
@@ -10,8 +10,8 @@ ork_include stdout
 _qemu_arch="$1"
 
 if [ -z "$_qemu_arch" ]; then
-   stdout_warning "No arch set; defaulting to $(stdout_color_wrap main-focused "i386")."
-   _qemu_arch="i386"
+   stdout_warning "No arch set; defaulting to $(stdout_color_wrap main-focused "x86_64")."
+   _qemu_arch="x86_64"
 fi
 
 if [ -z "$(which qemu-system-$_qemu_arch 2>/dev/null)" ]; then
@@ -43,8 +43,8 @@ stdout_normal "Building base commandline for $(stdout_color_wrap main-focused "q
 _args=""$_args" "$(qemu_arg_default "$_args" enable-kvm)""
 _args=""$_args" "$(qemu_arg_default "$_args" soundhw hda)""
 _args=""$_args" "$(qemu_arg_default "$_args" name qemuvm)""
-_args=""$_args" "$(qemu_arg_default "$_args" "net nic" ",macaddr=$(mac_random),name=eth0,model=e1000")""
-_args=""$_args" "$(qemu_arg_default "$_args" "device usb-ehci" ",id=usb2")""
+_args=""$_args" "$(qemu_arg_default "$_args" "net nic" ",model=e1000,name=eth0,macaddr=$(mac_random)")""
+#_args=""$_args" "$(qemu_arg_default "$_args" "device usb-ehci" ",id=usb2")""
 _args=""$_args" "$(qemu_arg_default "$_args" vga std)""
 
 if ! qemu_arg_exists "$_args" monitor; then
@@ -71,8 +71,8 @@ if ! qemu_arg_exists "$_args" vnc; then
    _args=""$_args" -vnc $ORK_QEMU_VM_HOST:$_port"
 fi
 
-if ! qemu_arg_exists "$_args" "net tap"; then
-   stdout_warning "No tap device provided. Making one instead."
+if ! qemu_arg_exists "$_args" netdev; then
+   stdout_warning "No network device provided. Making one instead."
 
    if [ -z "$(if_interface_list | egrep '^vm-ro[[:digit:]]+$')" ]; then
       stdout_warning "No router exists to latch onto. Making one instead."
@@ -100,7 +100,7 @@ if ! qemu_arg_exists "$_args" "net tap"; then
 
    stdout_normal "Selected $(stdout_color_wrap main-focused "$_router") as VM router."
    stdout_warning "Bringing it up."
-   stdlib_trap if_interface_up "$_router"
+   stdlib_trap orkhideya-elevate if_interface_up "$_router"
 
    stdout_warning "Creating tunnel to $(stdout_color_wrap main-focused "$_router")."
    _tunnel_interface="$(stdlib_tmpfile "$_label-tunnel")"
@@ -126,7 +126,7 @@ if ! qemu_arg_exists "$_args" "net tap"; then
    _args=""$_args" "$(qemu_arg_default "$_args" "net tap" ",ifname=$_tunnel,script=no")""
 
    stdout_warning "Bringing it up."
-   stdlib_trap if_interface_up "$_tunnel"
+   stdlib_trap orkhideya-elevate if_interface_up "$_tunnel"
 
    stdout_normal "Tunnel is up."
 fi
