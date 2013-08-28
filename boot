@@ -40,12 +40,13 @@ _args="${@:3}"
 
 stdout_normal "Building base commandline for $(stdout_color_wrap main-focused "qemu") machine."
 
-_args=""$_args" "$(qemu_arg_default "$_args" enable-kvm)""
-_args=""$_args" "$(qemu_arg_default "$_args" soundhw hda)""
-_args=""$_args" "$(qemu_arg_default "$_args" name qemuvm)""
-_args=""$_args" "$(qemu_arg_default "$_args" "net nic" ",model=e1000,name=eth0,macaddr=$(mac_random)")""
-#_args=""$_args" "$(qemu_arg_default "$_args" "device usb-ehci" ",id=usb2")""
-_args=""$_args" "$(qemu_arg_default "$_args" vga std)""
+_args=""$(qemu_arg_default "$_args" enable-kvm)" "$_args""
+_args=""$(qemu_arg_default "$_args" soundhw hda)" "$_args""
+_args=""$(qemu_arg_default "$_args" name qemuvm)" "$_args""
+_args=""$(qemu_arg_default "$_args" "net nic" ",model=e1000,name=eth0,macaddr=$(mac_random)")" "$_args""
+_args=""$(qemu_arg_default "$_args" usb)" "$_args""
+_args=""$(qemu_arg_default "$_args" "device usb-ehci" ",id=usb2")" "$_args""
+_args=""$(qemu_arg_default "$_args" vga std)" "$_args""
 
 if ! qemu_arg_exists "$_args" monitor; then
    stdout_normal "No monitor provided. Looking for port to host it on."
