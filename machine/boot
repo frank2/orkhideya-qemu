@@ -1,0 +1,62 @@
+#!/bin/bash 
+
+source orkhideya
+ork_include proc
+ork_include if
+ork_include mac
+ork_include qemu
+ork_include stdout
+
+_label="$1"
+
+if [ -z "$_label" -o "$_label" == '-' ]; then
+   _label="qemu-machine"
+fi
+
+if [ -z "$ORK_QEMU_SYSTEM" ]; then
+   stdout_error "No qemu system provided."
+   exit 1
+fi
+
+if ! which "$ORK_QEMU_SYSTEM" &>/dev/null; then
+   stdout_error "qemu system $(stdout_color_wrap main-focused "$ORK_QEMU_SYSTEM") unsupported."
+   exit 2
+fi
+
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" enable-kvm)" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" soundhw hda)" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" name qemuvm)" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" "net nic" ",model=e1000,name=eth0,macaddr=$(mac_random)")" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" usb)" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" "device usb-ehci" ",id=usb2")" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" vga std)" "$ORK_QEMU_ARGS""
+
+if ! qemu_arg_exists "$ORK_QEMU_ARGS" monitor; then
+   stdout_normal "No monitor provided. Looking for port to host it on."
+
+   for _port in $(seq 4000 5000); do 
+      if [ -z "$(lsof -n -i :$_port | grep -o '\(LISTEN\)')" ]; then break; fi
+   done
+
+   stdout_normal "Machine monitor will be hosted on port $(stdout_color_wrap main-focused "$_port")."
+
+   ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" -monitor tcp:$ORK_QEMU_VM_HOST:$_port,server,nowait"
+fi
+
+if ! qemu_arg_exists "$ORK_QEMU_ARGS" vnc; then
+   stdout_normal "No VNC provided. Looking for port to host it on."
+
+   for _port in $(seq 0 99); do 
+      _real_port="59$(printf '%02d' $_port)"
+      if [ -z "$(lsof -n -i :$_real_port | grep -o '\(LISTEN\)')" ]; then break; fi
+   done
+
+   stdout_normal "VNC will be hosted on port $(stdout_color_wrap main-focused "$ORK_QEMU_VM_HOST:$_real_port")."
+   ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" -vnc $ORK_QEMU_VM_HOST:$_port"
+fi
+
+stdout_warning "Launching new qemu machine."
+stdlib_trap proc_label_spawn "$_label" $ORK_QEMU_SYSTEM $ORK_QEMU_ARGS
+
+stdout_normal "qemu machine launched as $(stdout_color_wrap main-focused "$_label")."
+exit 0

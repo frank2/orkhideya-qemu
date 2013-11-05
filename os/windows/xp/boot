@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source orkhideya-root
+source orkhideya
 ork_include stdlib
 ork_include stdout
 ork_include proc
@@ -14,11 +14,11 @@ fi
 
 _args="${@:2}"
 
-stdout_normal "Building commandline for $(stdout_color_wrap main-focused "Windows XP") machine."
+stdout_normal "Building commandline for trusted x86 $(stdout_color_wrap main-focused "Windows XP") machine."
 
 _args=""$_args" "$(qemu_arg_default "$_args" name winxp)""
 _args=""$_args" "$(qemu_arg_default "$_args" m 1g)""
 _args=""$_args" "$(qemu_arg_default "$_args" hda "$(qemu_img_file "x86.windows.xp.base")")""
 
-stdlib_trap qemu_vm_boot x86.windows "$_label" $_args
+stdlib_trap qemu_vm_boot trusted.x86.windows "$_label" $_args
 exit 0
