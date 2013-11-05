@@ -1,24 +1,9 @@
 #!/bin/bash
 
 source orkhideya
-ork_include stdlib
-ork_include stdout
-ork_include proc
 ork_include qemu
 
-_label="$1"
-
-if [ -z "$_label" ]; then
-   _label="qemu-system-x86-win-xp"
-fi
-
-_args="${@:2}"
-
-stdout_normal "Building commandline for trusted x86 $(stdout_color_wrap main-focused "Windows XP") machine."
-
-_args=""$_args" "$(qemu_arg_default "$_args" name winxp)""
-_args=""$_args" "$(qemu_arg_default "$_args" m 1g)""
-_args=""$_args" "$(qemu_arg_default "$_args" hda "$(qemu_img_file "x86.windows.xp.base")")""
-
-stdlib_trap qemu_vm_boot trusted.x86.windows "$_label" $_args
-exit 0
+export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" name winxp)""
+export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" m 1g)""
+export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" hda "$(qemu_img_file "x86.windows.xp.base")")""
+export ORK_QEMU_SYSTEM="qemu-system-i386"
