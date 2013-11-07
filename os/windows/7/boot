@@ -2,12 +2,25 @@
 
 source orkhideya
 ork_include qemu
+ork_incldue stdout
 
 export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" name win7)""
 export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" m 2g)""
 
-if [ "$ORK_QEMU_SYSTEM" == "qemu-system-i386" ]; then
-   export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" hda "$(qemu_img_file "x86.windows.7.base")")""
-elif [ "$ORK_QEMU_SYSTEM" == "qemu-system-x86_64" ]; then
-   export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" hda "$(qemu_img_file "x86-64.windows.7.base")")""
+if [ -z "$ORK_QEMU_IMAGE" ]; then
+   if [ "$ORK_QEMU_SYSTEM" == "qemu-system-x86_64" ]; then
+      export ORK_QEMU_IMAGE="x86-64.windows.7.base"
+   elif [ "$ORK_QEMU_SYSTEM" == "qemu-system-i386" ]; then
+      export ORK_QEMU_IMAGE="x86.windows.7.base"
+   else
+      if [ -z "$ORK_QEMU_SYSTEM" ]; then
+         stdout_error "No qemu system provided."
+         exit 1
+      else
+         stdout_error "Unsupported qemu system for Windows 7: $(stdout_color_wrap main-focused "$ORK_QEMU_SYSTEM")."
+         exit 2
+      fi
+   fi
 fi
+
+source "$(qemu_vm_boot_file os.windows)"

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source orkhideya
+ork_include qemu
+ork_include stdout
+
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   stdout_error "No qemu label."
+   exit 1
+fi
+
+if [ -z "$ORK_QEMU_IMAGE" ]; then
+   stdout_error "No qemu image to fork."
+   exit 2
+fi
+
+_new_image_label="${ORK_QEMU_LABEL}-${ORK_QEMU_IMAGE}-fork"
+_new_image_file="$(stdlib_tmpfile $_new_image_label)"
+
+if ! qemu_img_fork "$ORK_QEMU_IMAGE" "$_new_image_file"; then
+   stdout_error "Image fork failed."
+   exit 3
+fi
+
+export ORK_QEMU_DISK="$_new_image_file"

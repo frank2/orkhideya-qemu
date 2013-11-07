@@ -3,6 +3,13 @@
 source orkhideya-root
 ork_include if
 ork_include qemu
+ork_include mac
+
+if [ -z "$ORK_QEMU_MAC_ADDR" ]; then
+   export ORK_QEMU_MAC_ADDR="$(mac_random)"
+fi 
+
+export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" "net nic" ",model=e1000,name=eth0,macaddr=$ORK_QEMU_MAC_ADDR")""
 
 if ! qemu_arg_exists "$ORK_QEMU_ARGS" "net tap"; then
    if [ -z "$(if_interface_list | grep ^rqmu[[:digit:]+])" ]; then

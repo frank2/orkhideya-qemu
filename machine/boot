@@ -7,7 +7,9 @@ ork_include mac
 ork_include qemu
 ork_include stdout
 
-if [ -z "$ORK_QEMU_LABEL" ]; then
+export ORK_QEMU_LABEL="$1"
+
+if [ -z "$ORK_QEMU_LABEL" -o "$ORK_QEMU_LABEL" == "-" ]; then
    export ORK_QEMU_LABEL="qemu-machine"
 fi
 
@@ -19,6 +21,14 @@ fi
 if ! which "$ORK_QEMU_SYSTEM" &>/dev/null; then
    stdout_error "qemu system $(stdout_color_wrap main-focused "$ORK_QEMU_SYSTEM") unsupported."
    exit 2
+fi
+
+if [ -z "$ORK_QEMU_DISK" -a -n "$ORK_QEMU_IMAGE" ]; then
+   ORK_QEMU_DISK="$(qemu_img_file "$ORK_QEMU_IMAGE")"
+fi
+
+if [ -n "$ORK_QEMU_DISK" ]; then
+   ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" hda "$ORK_QEMU_DISK")" "$ORK_QEMU_ARGS""
 fi
 
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" enable-kvm)" "$ORK_QEMU_ARGS""

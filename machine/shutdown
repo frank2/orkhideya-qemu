@@ -3,11 +3,9 @@
 source orkhideya-root
 ork_include proc
 
-_label="$1"
-
-if [ -z "$_label" -o "$_label" == '-' ]; then
+if [ -z "$ORK_QEMU_LABEL" ]; then
    _label="qemu-machine"
 fi
 
-proc_label_kill "$_label"
+proc_label_kill "$ORK_QEMU_LABEL"
 exit 0
