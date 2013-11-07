@@ -1,0 +1,13 @@
+#!/bin/bash 
+
+source orkhideya-root
+ork_include proc
+
+_label="$1"
+
+if [ -z "$_label" -o "$_label" == '-' ]; then
+   _label="qemu-machine"
+fi
+
+proc_label_kill "$_label"
+exit 0

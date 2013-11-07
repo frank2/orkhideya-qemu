@@ -1,16 +1,14 @@
 #!/bin/bash 
 
-source orkhideya
+source orkhideya-root
 ork_include proc
 ork_include if
 ork_include mac
 ork_include qemu
 ork_include stdout
 
-_label="$1"
-
-if [ -z "$_label" -o "$_label" == '-' ]; then
-   _label="qemu-machine"
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   export ORK_QEMU_LABEL="qemu-machine"
 fi
 
 if [ -z "$ORK_QEMU_SYSTEM" ]; then
@@ -56,7 +54,7 @@ if ! qemu_arg_exists "$ORK_QEMU_ARGS" vnc; then
 fi
 
 stdout_warning "Launching new qemu machine."
-stdlib_trap proc_label_spawn "$_label" $ORK_QEMU_SYSTEM $ORK_QEMU_ARGS
+stdlib_trap proc_label_spawn "$ORK_QEMU_LABEL" $ORK_QEMU_SYSTEM $ORK_QEMU_ARGS
 
-stdout_normal "qemu machine launched as $(stdout_color_wrap main-focused "$_label")."
+stdout_normal "qemu machine launched as $(stdout_color_wrap main-focused "$ORK_QEMU_LABEL")."
 exit 0

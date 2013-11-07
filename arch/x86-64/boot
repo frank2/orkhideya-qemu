@@ -1,3 +1,4 @@
 #!/bin/bash
 
 export ORK_QEMU_SYSTEM="qemu-system-x86_64"
+export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" cpu qemu64)""

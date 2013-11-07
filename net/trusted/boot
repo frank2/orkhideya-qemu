@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source orkhideya-root
+ork_include if
+ork_include qemu
+
+if ! qemu_arg_exists "$ORK_QEMU_ARGS" "net tap"; then
+   if [ -z "$(if_interface_list | grep ^rqmu[[:digit:]+])" ]; then
+      _router_interface="$(if_class_create router "$(if_gateway_interface)" rqmu)"
+
+      function router_cleanup
+      {
+         if_class_destroy router "$_router_interface"
+      }
+
+      stdlib_trap_cleanup_push router_cleanup
+   else
+      _router_interface="$(if_interface_list | grep ^rqmu[[:digit:]+] | sort | head -n1)"
+   fi
+
+   if [ -z "$_router_interface" ]; then
+      stdout_error "No router interface to connect to."
+      exit 1
+   fi
+
+   _tunnel_id="$(echo $ORK_QEMU_LABEL | md5sum - | awk '{ print $1 }')"
+   _tunnel_name="tqmu-${_tunnel_id:0:4}"
+   _tunnel_interface="$(if_class_create tunnel $_router_interface $_tunnel_name)"
+
+   if [ -z "$_tunnel_interface" ]; then
+      stdout_error "Failed to create tunnel."
+      stdlib_trap [ "0" == "1" ]
+   fi
+
+   function tunnel_cleanup
+   {
+      if_class_destroy tunnel "$_tunnel_interface"
+   }
+
+   stdlib_trap if_interface_up "$_tunnel_interface"
+   stdlib_trap_cleanup_push tunnel_cleanup
+
+   export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" -net tap,ifname="$_tunnel_interface",script=no"
+fi

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+source orkhideya-root
+ork_include if
+ork_include qemu
+
+_tunnel_id="$(echo $ORK_QEMU_LABEL | md5sum - | awk '{ print $1 }')"
+_tunnel_name="tqmu-${_tunnel_id:0:4}"
+_tunnel_interface="${_tunnel_name}0"
+
+if_class_destroy tunnel "$_tunnel_interface"

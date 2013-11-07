@@ -1,3 +1,7 @@
 #!/bin/bash
 
+source orkhideya
+ork_include qemu
+
 export ORK_QEMU_SYSTEM="qemu-system-i386"
+export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" cpu qemu32)""
