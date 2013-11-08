@@ -2,7 +2,7 @@
 
 source orkhideya
 ork_include qemu
-ork_incldue stdout
+ork_include stdout
 
 export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" name win7)""
 export ORK_QEMU_ARGS=""$ORK_QEMU_ARGS" "$(qemu_arg_default "$ORK_QEMU_ARGS" m 2g)""

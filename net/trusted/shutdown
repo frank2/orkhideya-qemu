@@ -2,7 +2,8 @@
 
 source orkhideya-root
 ork_include if
-ork_include qemu
+ork_include stdlib
 
-_tunnel_interface="$(cat "$(proc_label_path "$ORK_QEMU_LABEL")/tap")"
+_tunnel_interface="$(cat "$(stdlib_tmpfile "${ORK_QEMU_LABEL}-tap")")"
 if_class_destroy tunnel "$_tunnel_interface"
+shred -u "$(stdlib_tmpfile "${ORK_QEMU_LABEL}-tap")"

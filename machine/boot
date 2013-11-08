@@ -70,7 +70,7 @@ stdlib_trap proc_label_spawn "$ORK_QEMU_LABEL" $ORK_QEMU_SYSTEM $ORK_QEMU_ARGS
 _tap_device="$(echo "$ORK_QEMU_ARGS" | egrep -o -- "-net tap,[^ ]+" | egrep -o 'ifname=[^ ,]+' | awk -F '=' '{ print $2 }')"
 
 if [ -n "$_tap_device" ]; then
-   echo "$_tap_device" > "$(proc_label_path "$ORK_QEMU_LABEL")/tap"
+   echo "$_tap_device" > "$(stdlib_tmpfile "${ORK_QEMU_LABEL}-tap")"
 fi
 
 if [ -n "$ORK_QEMU_ROUTER" ]; then
