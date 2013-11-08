@@ -10,7 +10,7 @@ if [ -z "$ORK_QEMU_LABEL" ]; then
 fi
 
 if [ -z "$ORK_QEMU_IMAGE" ]; then
-   stdout_error "No qemu image to fork."
+   stdout_error "No forked qemu image."
    exit 2
 fi
 
@@ -28,8 +28,7 @@ stdout_warning "Creating diff image based on modded image."
 qemu-img create -b "$_modded_image_file" -f qcow2 "$_diff_image_file"
 _success="$(($_success | $?))"
 
-stdout_warning "Rebasing diff image to base image."
-qemu-img rebase -b "$_base_image_file" "$_diff_image_file"
+[ "$_success" == "0" ] && stdout_warning "Rebasing diff image to base image." && qemu-img rebase -b "$_base_image_file" "$_diff_image_file"
 _success="$(($_success | $?))"
 
 if [ "$_success" == "0" ]; then
