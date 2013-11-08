@@ -2,17 +2,6 @@
 
 source orkhideya
 ork_include qemu
-ork_include stdout
-
-if [ -z "$ORK_QEMU_LABEL" ]; then
-   stdout_error "No qemu label."
-   exit 1
-fi
-
-if [ -z "$ORK_QEMU_IMAGE" ]; then
-   stdout_error "No qemu image to fork."
-   exit 2
-fi
 
 # on boot, all we really want to do is make sure we fork the image.
 source "$(qemu_vm_boot_file disk.fork)"
