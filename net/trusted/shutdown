@@ -4,8 +4,5 @@ source orkhideya-root
 ork_include if
 ork_include qemu
 
-_tunnel_id="$(echo $ORK_QEMU_LABEL | md5sum - | awk '{ print $1 }')"
-_tunnel_name="tqmu-${_tunnel_id:0:4}"
-_tunnel_interface="${_tunnel_name}0"
-
+_tunnel_interface="$(cat "$(proc_label_path "$ORK_QEMU_LABEL")/tap")"
 if_class_destroy tunnel "$_tunnel_interface"

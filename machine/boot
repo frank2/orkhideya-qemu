@@ -7,7 +7,9 @@ ork_include mac
 ork_include qemu
 ork_include stdout
 
-export ORK_QEMU_LABEL="$1"
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   export ORK_QEMU_LABEL="$1"
+fi
 
 if [ -z "$ORK_QEMU_LABEL" -o "$ORK_QEMU_LABEL" == "-" ]; then
    export ORK_QEMU_LABEL="qemu-machine"
@@ -34,7 +36,6 @@ fi
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" enable-kvm)" "$ORK_QEMU_ARGS""
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" soundhw hda)" "$ORK_QEMU_ARGS""
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" name qemuvm)" "$ORK_QEMU_ARGS""
-ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" "net nic" ",model=e1000,name=eth0,macaddr=$(mac_random)")" "$ORK_QEMU_ARGS""
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" usb)" "$ORK_QEMU_ARGS""
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" "device usb-ehci" ",id=usb2")" "$ORK_QEMU_ARGS""
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" vga std)" "$ORK_QEMU_ARGS""
@@ -65,6 +66,16 @@ fi
 
 stdout_warning "Launching new qemu machine."
 stdlib_trap proc_label_spawn "$ORK_QEMU_LABEL" $ORK_QEMU_SYSTEM $ORK_QEMU_ARGS
+
+_tap_device="$(echo "$ORK_QEMU_ARGS" | egrep -o -- "-net tap,[^ ]+" | egrep -o 'ifname=[^ ,]+' | awk -F '=' '{ print $2 }')"
+
+if [ -n "$_tap_device" ]; then
+   echo "$_tap_device" > "$(proc_label_path "$ORK_QEMU_LABEL")/tap"
+fi
+
+if [ -n "$ORK_QEMU_ROUTER" ]; then
+   echo "$ORK_QEMU_ROUTER" > "$(proc_label_path "$ORK_QEMU_LABEL")/router"
+fi
 
 stdout_normal "qemu machine launched as $(stdout_color_wrap main-focused "$ORK_QEMU_LABEL")."
 exit 0

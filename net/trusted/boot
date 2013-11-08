@@ -30,9 +30,9 @@ if ! qemu_arg_exists "$ORK_QEMU_ARGS" "net tap"; then
       exit 1
    fi
 
-   _tunnel_id="$(echo $ORK_QEMU_LABEL | md5sum - | awk '{ print $1 }')"
-   _tunnel_name="tqmu-${_tunnel_id:0:4}"
-   _tunnel_interface="$(if_class_create tunnel $_router_interface $_tunnel_name)"
+   export ORK_QEMU_ROUTER="$_router_interface"
+
+   _tunnel_interface="$(if_class_create tunnel $_router_interface tqmu)"
 
    if [ -z "$_tunnel_interface" ]; then
       stdout_error "Failed to create tunnel."
