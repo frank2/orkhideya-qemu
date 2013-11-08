@@ -1,0 +1,40 @@
+#!/bin/bash
+
+source orkhideya
+ork_include qemu
+ork_include stdout
+
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   stdout_error "No qemu label."
+   exit 1
+fi
+
+if [ -z "$ORK_QEMU_IMAGE" ]; then
+   stdout_error "No qemu image to fork."
+   exit 2
+fi
+
+_image_label="${ORK_QEMU_LABEL}-${ORK_QEMU_IMAGE}"
+_modded_image_label="${_image_label}-fork"
+_diff_image_label="${_image_label}-diff"
+
+_modded_image_file="$(stdlib_tmpfile "$_modded_image_label")"
+_base_image_file="$(qemu_img_file "$ORK_QEMU_IMAGE")"
+_diff_image_file="$(stdlib_tmpfile "$_diff_image_label")"
+
+_success="0"
+
+stdout_warning "Creating diff image based on modded image."
+qemu-img create -b "$_modded_image_file" -f qcow2 "$_diff_image_file"
+_success="$(($_success | $?))"
+
+stdout_warning "Rebasing diff image to base image."
+qemu-img rebase -b "$_base_image_file" "$_diff_image_file"
+_success="$(($_success | $?))"
+
+if [ "$_success" == "0" ]; then
+   stdout_normal "Diff succeeded and saved as $(stdout_color_wrap main-focused "$_diff_image_file")."
+   source "$(qemu_vm_shutdown_file disk.fork)"
+else
+   stdout_error "Diff failed. Fork will not be deleted. It's saved at $(stdout_color_wrap main-focused "$_modded_image_file")."
+fi
