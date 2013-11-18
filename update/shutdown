@@ -1,0 +1,237 @@
+#!/bin/bash
+
+source orkhideya-root
+ork_include qemu
+ork_include stdlib
+ork_include stdout
+
+function update_default_patch_function
+{
+   local _patchfile="$1"
+   local _source="$2"
+   local _dest="$3"
+
+   local _oldifs="$IFS"
+   IFS="
+"
+
+   for _patch in $(cat "$_patchfile"); do
+      local _type="$(echo "$_patch" | awk -F ':' '{ print $1 }')"
+      local _filename="$(echo "$_patch" | awk -F ':' '{ print $2 }')"
+
+      if [ "$_type" == "N" ]; then
+         stdout_warning "Creating new file $(stdout_color_wrap main-focused "$_dest")/$(stdout_color_wrap attention "$_filename")."
+         $ORK_QEMU_UPDATE_PATCH_NEW_FUNC "$_source" "$_dest" "$_filename"
+      elif [ "$_type" == "D" -a -e "$_dest/$_filename" ]; then
+         stdout_warning "Deleting $(stdout_color_wrap main-focused "$_dest")/$(stdout_color_wrap attention "$_filename")."
+         $ORK_QEMU_UPDATE_PATCH_DELETE_FUNC "$_source" "$_dest" "$_filename"
+      elif [ "$_type" == "M" -a -e "$_dest/$_filename" ]; then
+         stdout_warning "Modifying $(stdout_color_wrap main-focused "$_dest")/$(stdout_color_wrap attention "$_filename")."
+         $ORK_QEMU_UPDATE_PATCH_MODIFY_FUNC "$_source" "$_dest" "$_filename"
+      fi
+   done
+
+
+   IFS="$_oldifs"
+   return 0
+}
+
+function update_default_diff_function
+{
+   local _base="$1"
+   local _target="$2"
+
+   local _oldifs="$IFS"
+   IFS="
+"
+
+   for _result in $(diff -rq "$_base" "$_target"); do
+      if [ -n "$(echo "$_result" | grep -o "^Only in $_target/")" ]; then
+         echo "$_result" | sed -re "s,^Only in $_target/,N:," -e 's,:\s,/,'
+      elif [ -n "$(echo "$_result" | grep -o "^Only in $_base/")" ]; then
+         echo "$_result" | sed -re "s,^Only in $_base/,D:," -e 's,:\s,/,'
+      elif [ -n "$(echo "$_result" | grep -o "^Files $_base")" ]; then
+         echo "$_result" | sed -re "s,^Files $_base/,M:," -e "s, and $_target/.*,,"
+      fi
+   done
+
+   IFS="$_oldifs"
+   return 0
+}
+
+function update_traverse_and_update
+{
+   local _image_path="$1"
+   local _patch_file="$2"
+   local _source_path="$3"
+   local _image_file="$_image_path/image"
+   local _image_stub="$(echo "$_image_path" | sed -e "s,^$(qemu_img_path)/,,")"
+   local _image_name="$(stdlib_configify "$_image_stub")"
+   local _image_parent="$(stdlib_filesearch "$(qemu_img_path)" "$(stdlib_cdup "$_image_stub")" 'image')"
+   local _parent_fork="${_image_parent}.${ORK_QEMU_LABEL}.fork"
+   local _update_fork="${_image_file}.${ORK_QEMU_LABEL}.fork"
+   local _update_mount="$(stdlib_tmpfile patch-$_image_name)"
+   
+   if [ -e "$_image_file" ]; then
+      stdout_warning "Forking $(stdout_color_wrap main-focused "$_image_file")."
+      qemu-img create -q -f qcow2 -b "$_image_file" "$_update_fork"
+
+      stdout_warning "Mounting $(stdout_color_wrap main-focused "$_update_fork")."
+      qemu_nbd_mount "$_update_fork" "$_update_mount" $ORK_QEMU_UPDATE_MOUNT_OPTS -o rw
+
+      stdout_warning "Patching image with changeset $(stdout_color_wrap main-focused "$_patch_file") sourcing $(stdout_color_wrap main-focused "$_source_path") via $(stdout_color_wrap main-focused "$ORK_QEMU_UPDATE_PATCH_FUNC") method."
+      $ORK_QEMU_UPDATE_PATCH_FUNC "$_patch_file" "$_source_path" "$_update_mount"
+
+      stdout_warning "Unmounting $(stdout_color_wrap main-focused "$_update_mount")."
+      qemu_nbd_unmount "$_update_mount" && rm -r "$_update_mount"
+   fi
+
+   for _child in $(find "$_image_path" -maxdepth 1 -type d | tail -n+2); do
+      update_traverse_and_update "$_child" "$_patch_file" "$_source_path"
+   done
+
+   if [ -e "$_parent_fork" ]; then
+      stdout_warning "Rebasing $(stdout_color_wrap main-focused "$_update_fork") to $(stdout_color_wrap main-focused "$_parent_fork")."
+      qemu-img convert -q -c -f qcow2 -O qcow2 -o backing_file="$_parent_fork" "$_update_fork" "${_update_fork}.converted"
+      mv "${_update_fork}.converted" "$_update_fork"
+   fi
+}
+
+function update_traverse_and_rebase
+{
+   local _image_path="$1"
+   local _image_file="$_image_path/image"
+   local _image_stub="$(echo "$_image_path" | sed -e "s,^$(qemu_img_path)/,,")"
+   local _image_parent="$(stdlib_filesearch "$(qemu_img_path)" "$(stdlib_cdup "$_image_stub")" 'image')"
+   local _update_fork="${_image_file}.${ORK_QEMU_LABEL}.fork"
+
+   for _child in $(find "$_image_path" -maxdepth 1 -type d | tail -n+2); do
+      update_traverse_and_rebase "$_child"
+   done
+
+   if [ -e "$_image_file" ]; then
+      if [ -e "$_image_parent" ]; then
+         stdout_warning "Rebasing $(stdout_color_wrap main-focused "$_update_fork") to $(stdout_color_wrap main-focused "$_image_parent")."
+         qemu-img convert -q -c -f qcow2 -O qcow2 -o backing_file="$_image_parent" "$_update_fork" "${_update_fork}.converted"
+
+         stdout_warning "Replacing original image with updated image."
+         mv "${_update_fork}.converted" "$_image_file"
+      fi
+
+      stdout_warning "Removing $(stdout_color_wrap main-focused "$_update_fork")."
+      shred -u "$_update_fork"
+   fi
+}
+
+function update_default_patch_new_function
+{
+   local _source="$1"
+   local _dest="$2"
+   local _filename="$3"
+   local _parent_src="$_source/$(stdlib_cdup "$_filename")"
+   local _parent_dest="$_dest/$(stdlib_cdup "$_filename")"
+
+   while [ -n "$(echo "$_parent_src" | sed -re "s,^$_source/+,,")" -a ! -e "$_parent_dest" ]; do
+      stdout_warning "$_parent_dest does not exist."
+      _parent_src="$(stdlib_cdup "$_parent_src")"
+      _parent_dest="$(stdlib_cdup "$_parent_dest")"
+   done
+
+   if [ ! -e "$_parent_dest" ]; then
+      cp -a "$_parent_src" "$_parent_dest"
+   fi
+
+   if [ ! -e "$_source/$_filename" ]; then
+      cp -af "$_source/$_filename" "$_dest/$_filename"
+   fi
+
+   return 0
+}
+
+function update_default_patch_delete_function
+{
+   local _source="$1"
+   local _dest="$2"
+   local _filename="$3"
+   local _parent_dest="$_dest/$_filename"
+   local _parent_src="$_source/$_filename"
+
+   while [ "$_parent_src" != "$_source" -a ! -e "$_parent_src" ]; do
+      rm -rf "$_parent_dest"
+
+      _parent_dest="$(stdlib_cdup "$_parent_dest")"
+      _parent_src="$(stdlib_cdup "$_parent_src")"
+   done
+
+   return 0
+}
+
+function update_default_patch_modify_function
+{
+   local _source="$1"
+   local _dest="$2"
+   local _filename="$3"
+
+   cp -af "$_source/$_filename" "$_dest/$_filename"
+   return 0
+}
+
+test -z "$ORK_QEMU_UPDATE_PATCH_FUNC" && export ORK_QEMU_UPDATE_PATCH_FUNC="update_default_patch_function"
+test -z "$ORK_QEMU_UPDATE_PATCH_NEW_FUNC" && export ORK_QEMU_UPDATE_PATCH_NEW_FUNC="update_default_patch_new_function"
+test -z "$ORK_QEMU_UPDATE_PATCH_DELETE_FUNC" && export ORK_QEMU_UPDATE_PATCH_DELETE_FUNC="update_default_patch_delete_function"
+test -z "$ORK_QEMU_UPDATE_PATCH_MODIFY_FUNC" && export ORK_QEMU_UPDATE_PATCH_MODIFY_FUNC="update_default_patch_modify_function"
+test -z "$ORK_QEMU_DISK_DIFF_FUNC" && export ORK_QEMU_DISK_DIFF_FUNC="update_default_diff_function"
+export ORK_QEMU_DISK_DIFF_FORK_DESTROY=0
+
+if [ -z "$ORK_QEMU_IMAGE" ]; then
+   stdout_error "No qemu image."
+   exit 1
+fi
+
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   stdout_error "No qemu label."
+   exit 1
+fi
+
+_image_path="$(qemu_img_path "$ORK_QEMU_IMAGE")"
+
+stdout_warning "The following images are slated for update:"
+stdout_normal "... "$(stdout_color_wrap main-focused "$ORK_QEMU_IMAGE")""
+
+for _image in $(find -L "$_image_path" -name 'image' -type f -o -name 'image' -type l | sed -e "s,^$_image_path/,," -e 's,/*image$,,' -e 's,/,.,g' | sort); do
+   stdout_normal "... $(stdout_color_wrap main-focused "${ORK_QEMU_IMAGE}.$_image")"
+done
+
+_response="$(stdout_prompt_yesno "Would you like to merge the changes you've made?")"
+
+if [ "$_response" == "n" ]; then
+   stdout_error "User rejected the changes. Merge will not occur."
+   source "$(qemu_vm_shutdown_file disk.fork)"
+else
+   source "$(qemu_vm_shutdown_file disk.diff)"
+   _patch_target="$_diff_path/patch"
+
+   stdout_warning "Mounting $(stdout_color_wrap main-focused "$_modded_image_file") to $(stdout_color_wrap main-focused "$_diff_target")."
+   qemu_nbd_mount "$_modded_image_file" "$_diff_target" $ORK_QEMU_UPDATE_MOUNT_OPTS -o ro
+
+   for _child in $(find "$_image_path" -maxdepth 1 -type d | tail -n+2); do
+      update_traverse_and_update "$_child" "$_diff_file" "$_diff_target" 
+   done
+
+   stdout_warning "Unmounting $(stdout_color_wrap main-focused "$_diff_target")."
+   qemu_nbd_unmount "$_diff_target"
+
+   stdout_warning "Committing $(stdout_color_wrap main-focused "$_modded_image_file")."
+   qemu-img commit -q -f qcow2 "$_modded_image_file"
+
+   for _child in $(find "$_image_path" -maxdepth 1 -type d | tail -n+2); do
+      update_traverse_and_rebase "$_child"
+   done
+
+   stdout_warning "Removing $(stdout_color_wrap main-focused "$_modded_image_file")."
+   shred -u "$_modded_image_file"
+
+   stdout_normal "Update completed."
+fi
+
+source "$(qemu_vm_shutdown_file boot.foreground)"

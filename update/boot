@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source orkhideya-root
+ork_include qemu
+ork_include stdlib
+ork_include stdout
+
+if [ -z "$ORK_QEMU_IMAGE" ]; then
+   stdout_error "No qemu image."
+   exit 1
+fi
+
+_image_path="$(qemu_img_path "$ORK_QEMU_IMAGE")"
+
+if [ -n "$(find -L "$_image_path" -name 'image' -type f -o -name 'image' -type l)" ]; then
+   stdout_warning "By updating this VM, the following images will also be updated:"
+
+   for _image in $(find -L "$_image_path" -name 'image' -type f -o -name 'image' -type l | sed -e "s,^$_image_path/,," -e 's,/*image$,,' -e 's,/,.,g' | sort); do
+      stdout_normal "... $(stdout_color_wrap main-focused "${ORK_QEMU_IMAGE}.$_image")"
+   done
+
+   _response="$(stdout_prompt_yesno "Do you wish to continue?")"
+
+   if [ "$_response" == "n" ]; then
+      stdout_error "User rejected; aborting."
+      exit 2
+   fi
+fi
+
+source "$(qemu_vm_boot_file disk.diff)"
+source "$(qemu_vm_boot_file boot.foreground)"
