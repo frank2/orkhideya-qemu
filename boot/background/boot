@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source orkhideya-root
+ork_include qemu
+ork_include stdlib
+ork_include stdout
+
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   stdout_error "No qemu label set."
+   exit 1
+fi
+
+stdlib_trap qemu_vm_boot machine "$ORK_QEMU_LABEL"

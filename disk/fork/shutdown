@@ -14,6 +14,8 @@ if [ -z "$ORK_QEMU_IMAGE" ]; then
    exit 2
 fi
 
-_new_image_label="${ORK_QEMU_LABEL}-${ORK_QEMU_IMAGE}-fork"
-_new_image_file="$(stdlib_tmpfile $_new_image_label)"
-shred -u "$_new_image_file"
+_new_image_file="$(qemu_img_file "$ORK_QEMU_IMAGE").${ORK_QEMU_LABEL}.fork"
+
+if [ -e "$_new_image_file" ]; then
+   shred -u "$_new_image_file"
+fi

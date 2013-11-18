@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source orkhideya-root
+source orkhideya
 ork_include if
 ork_include stdlib
 

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+source orkhideya-root
+ork_include qemu
+ork_include stdout
+
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   stdout_error "No qemu label."
+   exit 1
+fi
+
+if [ -z "$ORK_QEMU_MACHINE" ]; then
+   stdout_error "No qemu machine."
+   exit 2
+fi
+
+source "$(qemu_vm_boot_file boot.background)"
+sleep 5
+
+while proc_label_is_running "$ORK_QEMU_LABEL"; do sleep 5; done
+qemu_vm_shutdown "$ORK_QEMU_MACHINE" "$ORK_QEMU_LABEL"

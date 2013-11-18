@@ -1,0 +1,6 @@
+#!/bin/bash
+
+source orkhideya
+ork_include qemu
+
+source "$(qemu_vm_boot_file disk.diff)"
