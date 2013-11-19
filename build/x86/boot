@@ -1,0 +1,9 @@
+#!/bin/bash
+
+source orkhideya
+ork_include proc
+ork_include qemu
+ork_include stdout
+
+source "$(qemu_vm_boot_file arch.x86)"
+source "$(qemu_vm_boot_file build)"

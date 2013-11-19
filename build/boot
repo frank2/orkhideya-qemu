@@ -1,0 +1,46 @@
+#!/bin/bash
+
+source orkhideya
+ork_include proc
+ork_include qemu
+ork_include stdout
+
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   export ORK_QEMU_LABEL="$1"
+fi
+
+if [ -z "$ORK_QEMU_LABEL" -o "$ORK_QEMU_LABEL" == '-' ]; then
+   export ORK_QEMU_LABEL="qemu-build"
+fi
+
+if [ -z "$ORK_QEMU_IMAGE" ]; then
+   export ORK_QEMU_IMAGE="$2"
+fi
+
+if [ -z "$ORK_QEMU_IMAGE" -o "$ORK_QEMU_IMAGE" == '-' ]; then
+   stdout_error "No image name provided."
+   exit 1
+fi
+
+_new_image_size="$3"
+
+if [ -z "$_new_image_size" ]; then
+   stdout_error "No image size provided."
+   exit 2
+fi
+
+if qemu_img_exists "$_new_image_name"; then
+   stdout_error "Image $(stdout_color_wrap main-focused "$_new_image_name") already exists."
+   exit 3
+fi
+
+export ORK_QEMU_ARGS="${@:4}"
+export ORK_QEMU_MACHINE="build"
+
+mkdir -p "$(qemu_img_path "$ORK_QEMU_IMAGE")"
+
+stdout_warning "Creating image."
+stdlib_trap qemu-img create -f qcow2 "$(qemu_img_file "$ORK_QEMU_IMAGE")" "$_new_image_size"
+
+stdout_warning "Booting $(stdout_color_wrap main-focused "$ORK_QEMU_IMAGE")."
+source "$(qemu_vm_boot_file boot.foreground)"

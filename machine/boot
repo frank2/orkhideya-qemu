@@ -29,16 +29,17 @@ if [ -z "$ORK_QEMU_DISK" -a -n "$ORK_QEMU_IMAGE" ]; then
    ORK_QEMU_DISK="$(qemu_img_file "$ORK_QEMU_IMAGE")"
 fi
 
+#ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" "device usb-ehci" ",id=usb2")" "$ORK_QEMU_ARGS""
+#ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" usb)" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" soundhw hda)" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" name qemuvm)" "$ORK_QEMU_ARGS""
+ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" vga std)" "$ORK_QEMU_ARGS""
+
 if [ -n "$ORK_QEMU_DISK" ]; then
    ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" hda "$ORK_QEMU_DISK")" "$ORK_QEMU_ARGS""
 fi
 
 ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" enable-kvm)" "$ORK_QEMU_ARGS""
-ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" soundhw hda)" "$ORK_QEMU_ARGS""
-ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" name qemuvm)" "$ORK_QEMU_ARGS""
-ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" usb)" "$ORK_QEMU_ARGS""
-ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" "device usb-ehci" ",id=usb2")" "$ORK_QEMU_ARGS""
-ORK_QEMU_ARGS=""$(qemu_arg_default "$ORK_QEMU_ARGS" vga std)" "$ORK_QEMU_ARGS""
 
 if ! qemu_arg_exists "$ORK_QEMU_ARGS" monitor; then
    stdout_normal "No monitor provided. Looking for port to host it on."
@@ -67,10 +68,11 @@ fi
 stdout_warning "Launching new qemu machine."
 stdlib_trap proc_label_spawn "$ORK_QEMU_LABEL" $ORK_QEMU_SYSTEM $ORK_QEMU_ARGS
 
+echo "$ORK_QEMU_IMAGE" > "$(proc_label_path "$ORK_QEMU_LABEL")/image"
 _tap_device="$(echo "$ORK_QEMU_ARGS" | egrep -o -- "-net tap,[^ ]+" | egrep -o 'ifname=[^ ,]+' | awk -F '=' '{ print $2 }')"
 
 if [ -n "$_tap_device" ]; then
-   echo "$_tap_device" > "$(stdlib_tmpfile "${ORK_QEMU_LABEL}-tap")"
+   echo "$_tap_device" > "$(proc_label_path "$ORK_QEMU_LABEL")/tap"
 fi
 
 if [ -n "$ORK_QEMU_ROUTER" ]; then

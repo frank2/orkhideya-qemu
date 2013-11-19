@@ -1,0 +1,8 @@
+#!/bin/bash
+
+source orkhideya
+ork_include proc
+ork_include qemu
+ork_include stdout
+
+source "$(qemu_vm_shutdown_file build)"

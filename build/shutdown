@@ -1,0 +1,30 @@
+#!/bin/bash
+
+source orkhideya
+ork_include proc
+ork_include qemu
+ork_include stdout
+
+if [ -z "$ORK_QEMU_LABEL" ]; then
+   export ORK_QEMU_LABEL="$1"
+fi
+
+if [ -z "$ORK_QEMU_LABEL" -o "$ORK_QEMU_LABEL" == '-' ]; then
+   export ORK_QEMU_LABEL="qemu-build"
+fi
+
+export ORK_QEMU_IMAGE="$(cat "$(proc_label_path "$ORK_QEMU_LABEL")/image")"
+
+if [ -z "$ORK_QEMU_IMAGE" ]; then
+   stdout_error "Don't know what the image was! Aborting shutdown."
+   exit 1
+fi
+
+_response="$(stdout_prompt_yesno "Would you like to keep this image?")"
+
+if [ "$_response" == "n" ]; then
+   stdout_normal "User rejected the installation."
+   rm -r "$(qemu_img_path "$ORK_QEMU_IMAGE")"
+fi
+
+source "$(qemu_vm_shutdown_file boot.foreground)"
